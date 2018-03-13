@@ -1,0 +1,23 @@
+{
+  "name": "ts-openapi-generator",
+  "version": "0.0.1",
+  "license": "MIT",
+  "private": true,
+  "author": "kelvinsix <kelvinsixl@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kelvinsix/ts-openapi-generator.git"
+  },
+  "bin": "build/cli.js",
+  "engines": {
+    "node": ">=6.0.0"
+  },
+  "dependencies": {
+    "glob": "^7.1.2",
+    "openapi3-ts": "^0.8.0",
+    "typescript": "^2.7.2"
+  },
+  "devDependencies": {
+    "@types/glob": "^5.0.35"
+  }
+}
