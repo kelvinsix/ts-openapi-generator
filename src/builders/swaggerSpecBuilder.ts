@@ -19,7 +19,14 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
         }
 
         this.metadata.controllers.forEach(controller => {
-            let tag = controller.name.replace(/controller$/i, '');
+            let controllerName = controller.name.replace(/controller$/i, '');
+            if (controller.description) {
+                this.addTag({
+                    name: controllerName,
+                    description: controller.description
+                });
+            }
+
             controller.methods.forEach(method => {
                 method.routes.forEach(route => {
                     let path = this.buildFullRoute(route.route, controller);
@@ -29,7 +36,8 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                     };
 
                     pathObj[route.method] = <oa.OperationObject>{
-                        tags: [ tag ],
+                        tags: [ controllerName ],
+                        summary: method.summary,
                         responses: { default: { description: 'Success' } }
                     };
                 });

@@ -6,12 +6,14 @@ import { DecoratorType, processDecorators } from "../utils/decoratorUtil";
 export interface Controller {
     name: string;
     route: string;
+    description?: string;
     methods: Method[];
 }
 
 export class ControllerGenerator implements Controller {
     name: string;
     route: string;
+    description: string;
     methods: Method[] = [];
 
     constructor(private readonly node: ts.ClassDeclaration, private readonly typeChecker: ts.TypeChecker) {
@@ -24,15 +26,8 @@ export class ControllerGenerator implements Controller {
 
     public generate(): Controller {
         this.name = this.node.name.text;
-
-        if (this.node.members && this.node.members.length) {
-            this.node.members.filter(m => ts.isMethodDeclaration(m)).forEach((member: ts.MethodDeclaration) => {
-                const generator = new MethodGenerator(member, this.typeChecker);
-                if (generator.isValid()) {
-                    this.methods.push(generator.generate());
-                }
-            });
-        }
+        this.processJSDocs();
+        this.processMethods();
         return this;
     }
 
@@ -44,5 +39,26 @@ export class ControllerGenerator implements Controller {
                     this.route = decorator.argument;
             }
         })
+    }
+
+    private processJSDocs() {
+        const jsDocs: ts.JSDoc[] = (this.node as any).jsDoc;
+        if (!jsDocs || jsDocs.length === 0) return;
+
+        const jsDoc = jsDocs[0];
+        this.description = jsDoc.comment;
+
+        // TODO: process tags
+    }
+
+    private processMethods() {
+        if (this.node.members && this.node.members.length) {
+            this.node.members.filter(m => ts.isMethodDeclaration(m)).forEach((member: ts.MethodDeclaration) => {
+                const generator = new MethodGenerator(member, this.typeChecker);
+                if (generator.isValid()) {
+                    this.methods.push(generator.generate());
+                }
+            });
+        }
     }
 }
