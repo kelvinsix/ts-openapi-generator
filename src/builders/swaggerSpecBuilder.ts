@@ -50,6 +50,7 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
         let path: string = "";
         if (controller.route) path += controller.route;
         if (route && typeof route === "string") path += route;
-        return path;
+
+        return path.replace(/(\/)?:(\w+)(\(.*?\))?(\*)?(\?)?/g, '$1{$2}');
     }
 }
