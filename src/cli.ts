@@ -5,6 +5,7 @@ import * as ts from "typescript";
 import { MetadataGenerator } from "./generators/metadataGenerator";
 import { SwaggerSpecBuilder } from "./builders/swaggerSpecBuilder";
 import { Config } from "./config";
+import { extname } from "path";
 
 const workingDir: string = process.cwd();
 
@@ -29,7 +30,7 @@ function loadConfig(path: string): Config {
     info.title = info.title || getPackageJsonValue('name');
     info.version = info.version || getPackageJsonValue('version');
     info.description = info.description || getPackageJsonValue('description');
-    config.outputFile = config.outputFile || `${workingDir}/swagger.json`;
+    config.outputFile = config.outputFile || `${workingDir}/openapi.json`;
     if (!info.title || !info.version) {
         throw new Error('Missing required field');
     }
@@ -50,7 +51,8 @@ function main(args) {
     metadata.generate();
     const specBuilder = new SwaggerSpecBuilder(metadata, config);
 
-    fs.writeFileSync(config.outputFile, specBuilder.getSpecAsJson(undefined, config.indent), { encoding: 'utf8' });
+    const specString = extname(config.outputFile) === '.yaml' ? specBuilder.getSpecAsYaml() : specBuilder.getSpecAsJson(undefined, config.indent);
+    fs.writeFileSync(config.outputFile, specString, { encoding: 'utf8' });
 }
 
 main(process.argv.slice(2));

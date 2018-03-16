@@ -1,5 +1,6 @@
 
 import * as oa from 'openapi3-ts';
+import { safeDump } from 'js-yaml';
 
 export class OpenApiBuilder implements oa.OpenApiBuilder {
     rootDoc: oa.OpenAPIObject;
@@ -28,7 +29,7 @@ export class OpenApiBuilder implements oa.OpenApiBuilder {
     }
 
     getSpecAsYaml(): string {
-        return '';
+        return safeDump(this.getSpec());
     }
 
     private static isValidOpenApiVersion(v?) {
