@@ -3,7 +3,7 @@ import * as oa from "openapi3-ts";
 import { OpenApiBuilder } from "./openApiBuilder";
 import { MetadataGenerator } from "../generators/metadataGenerator";
 import { Controller } from "../generators/controllerGenerator";
-import { Config } from "../config";
+import { Config } from "../types";
 
 export class SwaggerSpecBuilder extends OpenApiBuilder {
     constructor(private readonly metadata: MetadataGenerator, private readonly config: Config) {

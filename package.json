@@ -13,12 +13,14 @@
     "node": ">=6.0.0"
   },
   "dependencies": {
+    "argparse": "^1.0.10",
     "glob": "^7.1.2",
     "js-yaml": "^3.11.0",
     "openapi3-ts": "^0.8.0",
     "typescript": "^2.7.2"
   },
   "devDependencies": {
+    "@types/argparse": "^1.0.33",
     "@types/glob": "^5.0.35",
     "@types/js-yaml": "^3.10.1"
   }
