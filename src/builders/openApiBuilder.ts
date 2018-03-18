@@ -11,7 +11,7 @@ export class OpenApiBuilder implements oa.OpenApiBuilder {
 
     constructor() {
         this.rootDoc = {
-            openapi: '3.0',
+            openapi: '3.0.1',
             info: {
                 title: null,
                 version: null,
