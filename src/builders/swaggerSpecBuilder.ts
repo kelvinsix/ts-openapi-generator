@@ -65,11 +65,8 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
         });
 
         const schemas = this.metadata.typeSchemas;
-        for (const name in schemas) {
-            if (schemas.hasOwnProperty(name)) {
-                const schema: oa.SchemaObject = schemas[name];
-                this.addSchema(name, schema);
-            }
+        for (const [name, schema] of schemas) {
+            this.addSchema(name, schema);
         }
 
         return super.getSpec();

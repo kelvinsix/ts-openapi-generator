@@ -39,24 +39,104 @@ export interface TypeSchema {
 
 const PrimitiveTypeFlags = ts.TypeFlags.Number | ts.TypeFlags.Boolean | ts.TypeFlags.String | ts.TypeFlags.Null;
 
+export class TypeSchemaMap {
+    private schemas: { [id: number]: TypeSchema } = {};
+    private typeNamesById: { [id: number]: string } = {};
+    private typeNamesUsed: { [name: string]: boolean } = {};
+
+    get(type: ts.Type): TypeSchema {
+        const id = (type as any).id as number;
+        return this.schemas[id];
+    }
+    set(type: ts.Type, schema: TypeSchema): TypeSchema {
+        const id = (type as any).id as number;
+        return this.schemas[id] = schema;
+    }
+
+    /** helper for map iteration */
+    [Symbol.iterator] = function*(): IterableIterator<[string, TypeSchema]> {
+        for (const id in this.schemas) {
+            if (this.schemas.hasOwnProperty(id)) {
+                yield [this.typeNamesById[id], this.schemas[id]];
+            }
+        }
+    }
+
+    /** Gets/generates a globally unique type name for the given type */
+    public getTypeName(type: ts.Type, typeChecker: ts.TypeChecker) {
+        const id = (type as any).id as number;
+        if (this.typeNamesById[id]) { // Name already assigned?
+            return this.typeNamesById[id];
+        }
+
+        const baseName = typeChecker.typeToString(type, undefined, ts.TypeFormatFlags.UseFullyQualifiedType);
+        let name = baseName;
+        if (this.typeNamesUsed[name]) { // If a type with same name exists
+            for (let i = 1; true; ++i) { // Try appending "_1", "_2", etc.
+                name = baseName + "_" + i;
+                if (!this.typeNamesUsed[name]) {
+                    break;
+                }
+            }
+        }
+
+        this.typeNamesById[id] = name;
+        this.typeNamesUsed[name] = true;
+        return name;
+    }
+}
+
 export class TypeGenerator {
-    reffedSchemas: { [key: string]: TypeSchema };
+    reffedSchemas = new TypeSchemaMap();
 
     constructor(private readonly typeChecker: ts.TypeChecker) {
     }
 
-    public getTypeSchema(type: ts.Type): TypeSchema {
-        const schema: TypeSchema = {};
+    public getTypeSchema(type: ts.Type, schema: TypeSchema = {}): TypeSchema {
         let returnSchema = schema;
 
-        if (type.flags & ts.TypeFlags.Union) {
-            this.getUnionTypeSchema(<ts.UnionType>type, schema);
-        } else if (!type.symbol) {
-            this.getPrimitiveTypeSchema(type, schema);
-        } else if (type.flags & ts.TypeFlags.Object) {
-            this.getClassTypeSchema(<ts.ObjectType>type, schema);
+        let asRef = true;
+        if (!type.symbol || (type.flags & ts.TypeFlags.Object && (<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Anonymous)) {
+            asRef = false;
+        } else if (type.flags & ts.TypeFlags.Object && ['Promise', 'Date', 'Array'].indexOf(type.symbol.name) != -1) {
+            asRef = false;
         } else {
-            throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(type));
+            returnSchema = {
+                $ref:  `#/components/schemas/${this.reffedSchemas.getTypeName(type, this.typeChecker)}`,
+            };
+        }
+
+        if (!asRef || !this.reffedSchemas.get(type)) {
+            if (asRef) {
+                this.reffedSchemas.set(type, schema);
+            }
+
+            if (!type.symbol) {
+                if (type.flags & (PrimitiveTypeFlags | ts.TypeFlags.Literal)) {
+                    this.getPrimitiveTypeSchema(type, schema);
+                } else if (type.flags & ts.TypeFlags.Union) {
+                    this.getUnionTypeSchema(<ts.UnionType>type, schema);
+                } else if (type.flags & ts.TypeFlags.Void) {
+                    schema.type = undefined;
+                } else if (type.flags & ts.TypeFlags.Intersection) {
+                    this.getIntersectionTypeSchema(<ts.IntersectionType>type, schema);
+                } else if (type.flags & ts.TypeFlags.Object && (<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Reference) {
+                    this.getTupleTypeSchema(<ts.TypeReference>type, schema);
+                } else {
+                    throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(type));
+                }
+            } else if (type.flags & ts.TypeFlags.Object) {
+                if ((<ts.ObjectType>type).objectFlags & (ts.ObjectFlags.Reference | ts.ObjectFlags.Anonymous)) {
+                    this.getClassTypeSchema(<ts.TypeReference>type, schema);
+                } else if ((<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Interface && this.typeChecker.typeToString(type) === 'Date') {
+                    schema.type = 'string';
+                    schema.format = 'date-time';
+                } else {
+                    throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(type));
+                }
+            } else {
+                throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(type));
+            }
         }
 
         return returnSchema;
@@ -77,59 +157,110 @@ export class TypeGenerator {
 
     private getUnionTypeSchema(unionType: ts.UnionType, schema: TypeSchema) {
         const literalValues: PrimitiveType[] = [];
+        const schemas: TypeSchema[] = [];
 
         for (const subType of unionType.types) {
             let value;
             if (subType.flags & ts.TypeFlags.StringOrNumberLiteral) {
                 value = (<ts.LiteralType>subType).value;
+                if (literalValues.indexOf(value) === -1) {
+                    literalValues.push(value);
+                }
             } else {
-                throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(subType));
-            }
-
-            if (literalValues.indexOf(value) === -1) {
-                literalValues.push(value);
+                const subSchema = this.getTypeSchema(subType);
+                schemas.push(subSchema);
             }
         }
 
-        if (literalValues.every(x => typeof x === 'string')) {
-            schema.type = 'string';
-        } else if (literalValues.every(x => typeof x === 'number')) {
-            schema.type = 'number';
+        if (literalValues.length) {
+            let type;
+            if (literalValues.every(x => typeof x === 'string')) {
+                type = 'string';
+            } else if (literalValues.every(x => typeof x === 'number')) {
+                type = 'number';
+            } else {
+                throw new NotSupportedError('Multiple type not supported at ' + this.typeChecker.typeToString(unionType));
+            }
+            schemas.push({ type, enum: literalValues.sort() });
+        }
+
+        if (schemas.length === 1) {
+            for (const key in schemas[0]) {
+                if (schemas[0].hasOwnProperty(key)) {
+                    schema[key] = schemas[0][key];
+                }
+            }
         } else {
-            throw new NotSupportedError('Multiple type not supported at ' + this.typeChecker.typeToString(unionType));
+            schema.anyOf = schemas;
         }
-
-        schema.enum = literalValues.sort();
     }
 
-    private getClassTypeSchema(type: ts.ObjectType, schema: TypeSchema) {
+    private getTupleTypeSchema(type: ts.TypeReference, schema: TypeSchema) {
+        const subType = type.typeArguments[0];
+        if (!type.typeArguments.length || !type.typeArguments.every(st => st === subType)) {
+            throw new NotSupportedError('Multiple type in tuple is not support, ' + this.typeChecker.typeToString(type));
+        }
+
+        schema.type = "array";
+        schema.items = this.getTypeSchema(subType);
+        schema.minItems = schema.maxItems = type.typeArguments.length;
+    }
+
+    private getIntersectionTypeSchema(type: ts.IntersectionType, schema: TypeSchema) {
+        schema.allOf = [];
+        for (const subType of type.types) {
+            schema.allOf.push(this.getTypeSchema(subType));
+        }
+    }
+
+    private getClassTypeSchema(type: ts.TypeReference, schema: TypeSchema) {
+        if (type.typeArguments && type.typeArguments.length) {
+            return this.getGenericTypeSchema(type, schema);
+        }
+
         schema.type = 'object';
         schema.properties = {};
-        const typeDefNode = <ts.ClassDeclaration>type.symbol.declarations[0];
+
+        const typeDefNode = type.symbol.declarations ? type.symbol.declarations[0] : undefined;
         const props = this.typeChecker.getPropertiesOfType(type);
 
         if (props.length) {
             for (const prop of props) {
-                const subType = this.typeChecker.getTypeOfSymbolAtLocation(prop, typeDefNode);
-                const subSchema = schema.properties[prop.name] = this.getTypeSchema(subType)
+                if (prop.flags & ts.SymbolFlags.Method) {
+                    // skip it
+                } else if (prop.flags & ts.SymbolFlags.Property) {
+                    const subType = this.typeChecker.getTypeOfSymbolAtLocation(prop, typeDefNode);
+                    const subSchema = schema.properties[prop.name] = this.getTypeSchema(subType)
 
-                const comments = prop.getDocumentationComment(this.typeChecker);
-                if (comments.length) {
-                    subSchema.description = ts.displayPartsToString(comments).trim();
-                }
-
-                const propDeclNode = <ts.PropertyDeclaration>prop.declarations[0];
-                if (!ts.isPropertyDeclaration(propDeclNode)) {
-                    throw new NotImplementedError('Unknown property ' + prop.name);
-                } else if (!propDeclNode.questionToken) {
-                    if (!schema.required) {
-                        schema.required = [];
+                    const comments = prop.getDocumentationComment(this.typeChecker);
+                    if (comments.length) {
+                        subSchema.description = ts.displayPartsToString(comments).trim();
                     }
-                    schema.required.push(prop.name);
+
+                    const propDeclNode = <ts.PropertyDeclaration>prop.declarations[0];
+                    if (!propDeclNode.questionToken) {
+                        if (!schema.required) {
+                            schema.required = [];
+                        }
+                        schema.required.push(prop.name);
+                    }
+                } else {
+                    throw new NotImplementedError('Unknown symbol ' + prop.name);
                 }
             }
-        } else {
+        } else if (!(type.symbol.flags & ts.SymbolFlags.TypeLiteral)) {
             throw new NotImplementedError('no members in class declaration');
+        }
+    }
+
+    private getGenericTypeSchema(type: ts.TypeReference, schema: TypeSchema) {
+        if (type.symbol.name === 'Promise' && type.typeArguments.length === 1) {
+            this.getTypeSchema(type.typeArguments[0], schema);
+        } else if (type.symbol.name === 'Array' && type.typeArguments.length === 1) {
+            schema.type = 'array';
+            schema.items = this.getTypeSchema(type.typeArguments[0]);
+        } else {
+            throw new NotImplementedError('Unknown generic type ' + this.typeChecker.typeToString(type));
         }
     }
 }

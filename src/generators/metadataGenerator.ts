@@ -1,7 +1,7 @@
 
 import * as ts from "typescript";
 import { ControllerGenerator, Controller } from "./controllerGenerator";
-import { TypeSchema, TypeGenerator } from "./typeGenerator";
+import { TypeGenerator, TypeSchemaMap } from "./typeGenerator";
 
 export class MetadataGenerator {
     private program: ts.Program;
@@ -15,7 +15,7 @@ export class MetadataGenerator {
         this.typeGenerator = new TypeGenerator(this.typeChecker);
     }
 
-    get typeSchemas(): TypeSchema {
+    get typeSchemas(): TypeSchemaMap {
         return this.typeGenerator.reffedSchemas;
     }
 
