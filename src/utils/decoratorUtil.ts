@@ -57,7 +57,7 @@ export function processDecorators(node: ts.Node, typeChecker: ts.TypeChecker, cb
             type: getType(name),
             argument: getArgument(decorator)
         }
-        if (metadata.type == DecoratorType.Param) {
+        if (metadata.type == DecoratorType.Param || metadata.type == DecoratorType.Body) {
             const [, where, isWhole ] = decoratorMap[name];
             metadata.paramIn = where;
             metadata.wholeParam = isWhole;

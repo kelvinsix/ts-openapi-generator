@@ -30,8 +30,34 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
 
             controller.methods.forEach(method => {
                 const paramObjs: oa.ParameterObject[] = [];
+                let requestBody: oa.RequestBodyObject;
+
                 for (const parameter of method.parameters) {
-                    if (parameter.wholeParam && parameter.schema.type === 'object') {
+                    if (parameter.where === 'body') {
+                        requestBody = requestBody || {
+                            content: {
+                                [controller.mediaType || '*/*']: {
+                                }
+                            }
+                        };
+                        const mediaType = requestBody.content[controller.mediaType || '*/*'];
+                        if (parameter.wholeParam) {
+                            if (mediaType.schema) {
+                                throw new Error('encountered multiple body parameters');
+                            }
+                            mediaType.schema = parameter.schema;
+                        } else {
+                            let bodySchema: oa.SchemaObject = mediaType.schema;
+                            if (!bodySchema) {
+                                bodySchema = mediaType.schema = { type: 'object' };
+                            }
+
+                            if (bodySchema.properties[parameter.name]) {
+                                throw new Error('encountered multiple body parameter ' + parameter.name);
+                            }
+                            bodySchema.properties[parameter.name] = parameter.schema;
+                        }
+                    } else if (parameter.wholeParam && parameter.schema.type === 'object') {
                         for (const name in parameter.schema.properties) {
                             if (parameter.schema.properties.hasOwnProperty(name)) {
                                 paramObjs.push(this.getParamObject(name, parameter.where,
@@ -58,6 +84,7 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                     };
                     if (method.summary) operation.summary = method.summary;
                     if (paramObjs.length) operation.parameters = paramObjs;
+                    if (requestBody && route.method !== 'get') operation.requestBody = requestBody;
                     if (method.returnSchema && (method.returnSchema.type || method.returnSchema.$ref)) {
                         (<oa.ResponseObject>operation.responses.default).content = {
                             [controller.mediaType || '*/*']: {

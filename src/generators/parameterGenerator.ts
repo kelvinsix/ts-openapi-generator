@@ -32,7 +32,7 @@ export class ParameterGenerator implements Parameter {
 
     private processDecorators(): void {
         processDecorators(this.node, this.metadata.typeChecker, decorator => {
-            if (decorator.type === DecoratorType.Param) {
+            if (decorator.type == DecoratorType.Param || decorator.type == DecoratorType.Body) {
                 this.name = decorator.argument;
                 this.where = decorator.paramIn;
                 this.wholeParam = decorator.wholeParam;
