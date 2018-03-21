@@ -58,6 +58,13 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                     };
                     if (method.summary) operation.summary = method.summary;
                     if (paramObjs.length) operation.parameters = paramObjs;
+                    if (method.returnSchema && (method.returnSchema.type || method.returnSchema.$ref)) {
+                        (<oa.ResponseObject>operation.responses.default).content = {
+                            [controller.mediaType || '*/*']: {
+                                schema: method.returnSchema
+                            }
+                        };
+                    }
 
                     pathObj[route.method] = operation;
                 });

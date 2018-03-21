@@ -127,7 +127,7 @@ export class TypeGenerator {
                 }
             } else if (type.flags & ts.TypeFlags.Object) {
                 if ((<ts.ObjectType>type).objectFlags & (ts.ObjectFlags.Reference | ts.ObjectFlags.Anonymous)) {
-                    this.getClassTypeSchema(<ts.TypeReference>type, schema);
+                    returnSchema = this.getClassTypeSchema(<ts.TypeReference>type, schema) || returnSchema;
                 } else if ((<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Interface && this.typeChecker.typeToString(type) === 'Date') {
                     schema.type = 'string';
                     schema.format = 'date-time';
@@ -213,7 +213,7 @@ export class TypeGenerator {
         }
     }
 
-    private getClassTypeSchema(type: ts.TypeReference, schema: TypeSchema) {
+    private getClassTypeSchema(type: ts.TypeReference, schema: TypeSchema): TypeSchema | undefined {
         if (type.typeArguments && type.typeArguments.length) {
             return this.getGenericTypeSchema(type, schema);
         }
@@ -253,9 +253,9 @@ export class TypeGenerator {
         }
     }
 
-    private getGenericTypeSchema(type: ts.TypeReference, schema: TypeSchema) {
+    private getGenericTypeSchema(type: ts.TypeReference, schema: TypeSchema): TypeSchema | undefined {
         if (type.symbol.name === 'Promise' && type.typeArguments.length === 1) {
-            this.getTypeSchema(type.typeArguments[0], schema);
+            return this.getTypeSchema(type.typeArguments[0], schema);
         } else if (type.symbol.name === 'Array' && type.typeArguments.length === 1) {
             schema.type = 'array';
             schema.items = this.getTypeSchema(type.typeArguments[0]);

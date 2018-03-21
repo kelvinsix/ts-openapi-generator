@@ -9,6 +9,7 @@ export interface Controller {
     route: string;
     description?: string;
     methods: Method[];
+    mediaType?: string;
 }
 
 export class ControllerGenerator implements Controller {
@@ -16,6 +17,7 @@ export class ControllerGenerator implements Controller {
     route: string;
     description: string;
     methods: Method[] = [];
+    mediaType?: string;
 
     constructor(private readonly node: ts.ClassDeclaration, private readonly metadata: MetadataGenerator) {
         this.processDecorators();
@@ -38,6 +40,9 @@ export class ControllerGenerator implements Controller {
                 case DecoratorType.Controller:
                     if (this.route) throw new Error(`Encountered multiple route decorator in '${this.node.name!.text}' controller`);
                     this.route = decorator.argument;
+                    if (decorator.name === 'JsonController') {
+                        this.mediaType = 'application/json';
+                    }
             }
         })
     }

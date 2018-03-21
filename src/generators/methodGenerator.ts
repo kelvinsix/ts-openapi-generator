@@ -3,6 +3,7 @@ import * as ts from "typescript";
 import { DecoratorType, processDecorators } from "../utils/decoratorUtil";
 import { ParameterGenerator, Parameter } from "./parameterGenerator";
 import { MetadataGenerator } from "./metadataGenerator";
+import { TypeSchema } from "./typeGenerator";
 
 interface Route {
     method: string;
@@ -14,6 +15,7 @@ export interface Method {
     summary?: string;
     description?: string;
     parameters: Parameter[];
+    returnSchema: TypeSchema
 }
 
 export class MethodGenerator implements Method {
@@ -22,6 +24,7 @@ export class MethodGenerator implements Method {
     summary: string;
     description: string;
     parameters: Parameter[] = [];
+    returnSchema: TypeSchema;
 
     constructor(private readonly node: ts.MethodDeclaration, private readonly metadata: MetadataGenerator) {
         this.processDecorators();
@@ -34,6 +37,7 @@ export class MethodGenerator implements Method {
     public generate(): Method {
         this.name = (this.node.name as ts.Identifier).text;
         this.processParameters();
+        this.processReturnType();
         this.processJSDocs();
         return this;
     }
@@ -67,5 +71,10 @@ export class MethodGenerator implements Method {
                 this.parameters.push(generator.generate());
             }
         });
+    }
+
+    private processReturnType() {
+        const type = this.metadata.typeChecker.getTypeFromTypeNode(this.node.type);
+        this.returnSchema = this.metadata.typeGenerator.getTypeSchema(type);
     }
 }
