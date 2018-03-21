@@ -1,6 +1,8 @@
 
 import * as ts from "typescript";
 import { DecoratorType, processDecorators } from "../utils/decoratorUtil";
+import { ParameterGenerator, Parameter } from "./parameterGenerator";
+import { MetadataGenerator } from "./metadataGenerator";
 
 interface Route {
     method: string;
@@ -11,6 +13,7 @@ export interface Method {
     routes: Route[];
     summary?: string;
     description?: string;
+    parameters: Parameter[];
 }
 
 export class MethodGenerator implements Method {
@@ -18,8 +21,9 @@ export class MethodGenerator implements Method {
     routes = [];
     summary: string;
     description: string;
+    parameters: Parameter[] = [];
 
-    constructor(private readonly node: ts.MethodDeclaration, private readonly typeChecker: ts.TypeChecker) {
+    constructor(private readonly node: ts.MethodDeclaration, private readonly metadata: MetadataGenerator) {
         this.processDecorators();
     }
 
@@ -29,18 +33,18 @@ export class MethodGenerator implements Method {
 
     public generate(): Method {
         this.name = (this.node.name as ts.Identifier).text;
+        this.processParameters();
         this.processJSDocs();
         return this;
     }
 
     private processDecorators() {
-        processDecorators(this.node, this.typeChecker, decorator => {
-            switch (decorator.type) {
-                case DecoratorType.Action:
-                    this.routes.push({
-                        method: decorator.name.toLowerCase(),
-                        route: decorator.argument
-                    });
+        processDecorators(this.node, this.metadata.typeChecker, decorator => {
+            if (decorator.type === DecoratorType.Action) {
+                this.routes.push({
+                    method: decorator.name.toLowerCase(),
+                    route: decorator.argument
+                });
             }
         });
     }
@@ -54,5 +58,14 @@ export class MethodGenerator implements Method {
         this.summary = jsDoc.comment;
 
         // TODO: process tags
+    }
+
+    private processParameters() {
+        this.node.parameters.filter(m => ts.isParameter(m)).forEach((parameter: ts.ParameterDeclaration) => {
+            const generator = new ParameterGenerator(parameter, this.metadata);
+            if (generator.isValid()) {
+                this.parameters.push(generator.generate());
+            }
+        });
     }
 }

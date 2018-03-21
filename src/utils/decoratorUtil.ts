@@ -6,6 +6,7 @@ export enum DecoratorType {
     Controller,
     Action,
     Param,
+    Body,
 }
 
 export interface DecoratorMetadata {
@@ -13,6 +14,8 @@ export interface DecoratorMetadata {
     type: DecoratorType;
     name: string;
     argument: string;
+    paramIn?: string;
+    wholeParam?: boolean;
 }
 
 export function processDecorators(node: ts.Node, typeChecker: ts.TypeChecker, cb: (decorator: DecoratorMetadata) => void) {
@@ -33,7 +36,8 @@ export function processDecorators(node: ts.Node, typeChecker: ts.TypeChecker, cb
 
     function getType(name: string): DecoratorType {
         if (decoratorMap[name]) {
-            return decoratorMap[name];
+            let type = decoratorMap[name];
+            return (type instanceof Array) ? type[0] : type;
         }
         return DecoratorType.Unknown;
     }
@@ -48,12 +52,17 @@ export function processDecorators(node: ts.Node, typeChecker: ts.TypeChecker, cb
     node.decorators.forEach(decorator => {
         const name = getName(decorator);
         if (!name) return;
-        const type = getType(name);
-        cb({
+        const metadata: DecoratorMetadata = {
             decorator, name,
             type: getType(name),
             argument: getArgument(decorator)
-        });
+        }
+        if (metadata.type == DecoratorType.Param) {
+            const [, where, isWhole ] = decoratorMap[name];
+            metadata.paramIn = where;
+            metadata.wholeParam = isWhole;
+        }
+        cb(metadata);
     });
 }
 
@@ -67,4 +76,13 @@ const decoratorMap = {
     'Options': DecoratorType.Action,
     'Head': DecoratorType.Action,
     'Patch': DecoratorType.Action,
+    'Param': [DecoratorType.Param, 'path', false],
+    'QueryParam': [DecoratorType.Param, 'query', false],
+    'QueryParams': [DecoratorType.Param, 'query', true],
+    'HeaderParam': [DecoratorType.Param, 'header', false],
+    'HeaderParams': [DecoratorType.Param, 'header', true],
+    'CookieParam': [DecoratorType.Param, 'cookie', false],
+    'CookieParams': [DecoratorType.Param, 'cookie', true],
+    'BodyParam': [DecoratorType.Body, 'body', false],
+    'Body': [DecoratorType.Body, 'body', true],
 };

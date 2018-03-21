@@ -65,7 +65,6 @@ function parseCommandLine(): CommandLineArgs {
         help: "TypeScript project file, default is 'tsconfig.json'"
     });
     const args: CommandLineArgs = parser.parseArgs();
-    console.log(args);
 
     if (args.workingDir) {
         if (args.config.match('[\/]')) {

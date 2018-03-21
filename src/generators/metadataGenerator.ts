@@ -1,16 +1,22 @@
 
 import * as ts from "typescript";
-
 import { ControllerGenerator, Controller } from "./controllerGenerator";
+import { TypeSchema, TypeGenerator } from "./typeGenerator";
 
 export class MetadataGenerator {
     private program: ts.Program;
-    private typeChecker: ts.TypeChecker;
+    typeChecker: ts.TypeChecker;
+    typeGenerator: TypeGenerator;
     controllers: Controller[] = []
 
     constructor(files: string[], options: ts.CompilerOptions) {
         this.program = ts.createProgram(files, options);
         this.typeChecker = this.program.getTypeChecker();
+        this.typeGenerator = new TypeGenerator(this.typeChecker);
+    }
+
+    get typeSchemas(): TypeSchema {
+        return this.typeGenerator.reffedSchemas;
     }
 
     public generate(): void {
@@ -31,7 +37,7 @@ export class MetadataGenerator {
         if (ts.isClassDeclaration(node) && node.name) {
             const symbol = this.typeChecker.getSymbolAtLocation(node.name);
             if (symbol) {
-                const generator = new ControllerGenerator(node, this.typeChecker);
+                const generator = new ControllerGenerator(node, this);
                 if (generator.isValid()) {
                     this.controllers.push(generator.generate());
                 }
