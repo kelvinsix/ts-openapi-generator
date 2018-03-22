@@ -57,13 +57,17 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                             }
                             bodySchema.properties[parameter.name] = parameter.schema;
                         }
-                    } else if (parameter.wholeParam && parameter.schema.type === 'object') {
-                        for (const name in parameter.schema.properties) {
-                            if (parameter.schema.properties.hasOwnProperty(name)) {
-                                paramObjs.push(this.getParamObject(name, parameter.where,
-                                    parameter.schema.properties[name],
-                                    parameter.schema.required && parameter.schema.required.indexOf(name) != -1)
-                                );
+                    } else if (parameter.wholeParam) {
+                        // TODO: set same parameter schema as reference
+                        const schema = parameter.schema.$ref ? this.metadata.typeSchemas.byRef(parameter.schema.$ref) : parameter.schema;
+                        if (schema.type === 'object') {
+                            for (const name in schema.properties) {
+                                if (schema.properties.hasOwnProperty(name)) {
+                                    paramObjs.push(this.getParamObject(name, parameter.where,
+                                        schema.properties[name],
+                                        schema.required && schema.required.indexOf(name) != -1)
+                                    );
+                                }
                             }
                         }
                     } else {
@@ -98,6 +102,8 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
             })
         });
 
+        // add all referenced schemas
+        // TODO: filter unused schemas
         const schemas = this.metadata.typeSchemas;
         for (const [name, schema] of schemas) {
             this.addSchema(name, schema);

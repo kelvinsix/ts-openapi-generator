@@ -41,8 +41,8 @@ const PrimitiveTypeFlags = ts.TypeFlags.Number | ts.TypeFlags.Boolean | ts.TypeF
 
 export class TypeSchemaMap {
     private schemas: { [id: number]: TypeSchema } = {};
-    private typeNamesById: { [id: number]: string } = {};
-    private typeNamesUsed: { [name: string]: boolean } = {};
+    private idToName: { [id: number]: string } = {};
+    private nameToId: { [name: string]: number } = {};
 
     get(type: ts.Type): TypeSchema {
         const id = (type as any).id as number;
@@ -53,11 +53,16 @@ export class TypeSchemaMap {
         return this.schemas[id] = schema;
     }
 
+    byRef(ref: string): TypeSchema {
+        const id = this.nameToId[ref.match(/^\#\/components\/schemas\/(.+)$/)[1]];
+        return this.schemas[id];
+    }
+
     /** helper for map iteration */
     [Symbol.iterator] = function*(): IterableIterator<[string, TypeSchema]> {
         for (const id in this.schemas) {
             if (this.schemas.hasOwnProperty(id)) {
-                yield [this.typeNamesById[id], this.schemas[id]];
+                yield [this.idToName[id], this.schemas[id]];
             }
         }
     }
@@ -65,23 +70,23 @@ export class TypeSchemaMap {
     /** Gets/generates a globally unique type name for the given type */
     public getTypeName(type: ts.Type, typeChecker: ts.TypeChecker) {
         const id = (type as any).id as number;
-        if (this.typeNamesById[id]) { // Name already assigned?
-            return this.typeNamesById[id];
+        if (this.idToName[id]) { // Name already assigned?
+            return this.idToName[id];
         }
 
         const baseName = typeChecker.typeToString(type, undefined, ts.TypeFormatFlags.UseFullyQualifiedType);
         let name = baseName;
-        if (this.typeNamesUsed[name]) { // If a type with same name exists
+        if (this.nameToId[name]) { // If a type with same name exists
             for (let i = 1; true; ++i) { // Try appending "_1", "_2", etc.
-                name = baseName + "_" + i;
-                if (!this.typeNamesUsed[name]) {
+                name = `${baseName}_${i}`;
+                if (!this.nameToId[name]) {
                     break;
                 }
             }
         }
 
-        this.typeNamesById[id] = name;
-        this.typeNamesUsed[name] = true;
+        this.idToName[id] = name;
+        this.nameToId[name] = id;
         return name;
     }
 }
