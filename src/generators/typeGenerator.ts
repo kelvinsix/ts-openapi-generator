@@ -103,7 +103,9 @@ export class TypeGenerator {
         let asRef = true;
         if (!type.symbol || (type.flags & ts.TypeFlags.Object && (<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Anonymous)) {
             asRef = false;
-        } else if (type.flags & ts.TypeFlags.Object && ['Promise', 'Date', 'Array'].indexOf(type.symbol.name) != -1) {
+        } else if (type.flags & ts.TypeFlags.Object && (<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Reference
+            && (<ts.TypeReference>type).typeArguments && (<ts.TypeReference>type).typeArguments.length) {
+            // don't reference to a generic type
             asRef = false;
         } else {
             returnSchema = {
@@ -264,6 +266,11 @@ export class TypeGenerator {
         } else if (type.symbol.name === 'Array' && type.typeArguments.length === 1) {
             schema.type = 'array';
             schema.items = this.getTypeSchema(type.typeArguments[0]);
+        } else if (type.symbol.name === 'Map' && type.typeArguments.length === 2) {
+            schema.type = 'object';
+            schema.properties = {};
+            schema.additionalProperties = this.getTypeSchema(type.typeArguments[1]);
+            // need handle 'K' type?
         } else {
             throw new NotImplementedError('Unknown generic type ' + this.typeChecker.typeToString(type));
         }

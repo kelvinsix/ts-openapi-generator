@@ -49,7 +49,7 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                         } else {
                             let bodySchema: oa.SchemaObject = mediaType.schema;
                             if (!bodySchema) {
-                                bodySchema = mediaType.schema = { type: 'object' };
+                                bodySchema = mediaType.schema = { type: 'object', properties: {} };
                             }
 
                             if (bodySchema.properties[parameter.name]) {
