@@ -46,6 +46,7 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                                 throw new Error('encountered multiple body parameters');
                             }
                             mediaType.schema = parameter.schema;
+                            if (parameter.required) requestBody.required = true;
                         } else {
                             let bodySchema: oa.SchemaObject = mediaType.schema;
                             if (!bodySchema) {
@@ -56,6 +57,14 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                                 throw new Error('encountered multiple body parameter ' + parameter.name);
                             }
                             bodySchema.properties[parameter.name] = parameter.schema;
+                            if (parameter.required) {
+                                requestBody.required = true;
+                                // openapi3-ts didn't define such field
+                                if ((<TypeSchema>bodySchema).required === undefined) {
+                                    (<TypeSchema>bodySchema).required = [];
+                                }
+                                (<TypeSchema>bodySchema).required.push(parameter.name);
+                            }
                         }
                     } else if (parameter.wholeParam) {
                         // TODO: set same parameter schema as reference
@@ -71,7 +80,7 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                             }
                         }
                     } else {
-                        paramObjs.push(this.getParamObject(parameter.name, parameter.where, parameter.schema));
+                        paramObjs.push(this.getParamObject(parameter.name, parameter.where, parameter.schema, parameter.required));
                     }
                 }
 
@@ -122,7 +131,7 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
 
     private getParamObject(name: string, where: string, schema: TypeSchema, required?: boolean): oa.ParameterObject {
         const paramObj: oa.ParameterObject = { name, in: where };
-        if (where === 'path' || required) {
+        if (required || where === 'path') {
             paramObj.required = true;
         }
 

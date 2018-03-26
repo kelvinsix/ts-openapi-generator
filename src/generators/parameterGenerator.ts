@@ -9,6 +9,7 @@ export interface Parameter {
     where: string;
     schema: TypeSchema;
     wholeParam?: boolean;
+    required?: boolean;
 }
 
 export class ParameterGenerator implements Parameter {
@@ -16,6 +17,7 @@ export class ParameterGenerator implements Parameter {
     where: string;
     schema: TypeSchema;
     wholeParam?: boolean;
+    required?: boolean;
 
     constructor(private readonly node: ts.ParameterDeclaration, private readonly metadata: MetadataGenerator) {
         this.processDecorators();
@@ -27,6 +29,7 @@ export class ParameterGenerator implements Parameter {
 
     public generate(): Parameter {
         this.name = this.name || this.node.name.getText();
+        this.processTokens();
         return this;
     }
 
@@ -41,5 +44,11 @@ export class ParameterGenerator implements Parameter {
                 this.schema = this.metadata.typeGenerator.getTypeSchema(type);
             }
         });
+    }
+
+    private processTokens() {
+        if (!this.node.questionToken) {
+            this.required = true;
+        }
     }
 }
