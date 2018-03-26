@@ -21,10 +21,10 @@ export interface TypeSchema {
 
     title?: string;
     multipleOf?: number;
-    maximum?: any;
-    exclusiveMaximum?: number;
+    maximum?: number;
+    exclusiveMaximum?: boolean;
     minimum?: number;
-    exclusiveMinimum?: number;
+    exclusiveMinimum?: boolean;
     maxLength?: number;
     minLength?: number;
     pattern?: string;
@@ -34,7 +34,7 @@ export interface TypeSchema {
     maxProperties?: number;
     minProperties?: number;
     required?: string[];
-    enum?: PrimitiveType[] | TypeSchema[];
+    enum?: PrimitiveType[]; // complex type is not implemented
 }
 
 const PrimitiveTypeFlags = ts.TypeFlags.Number | ts.TypeFlags.Boolean | ts.TypeFlags.String | ts.TypeFlags.Null;
