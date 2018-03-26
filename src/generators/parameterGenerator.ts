@@ -47,7 +47,9 @@ export class ParameterGenerator implements Parameter {
     }
 
     private processTokens() {
-        if (!this.node.questionToken) {
+        if (this.node.initializer) {
+            this.schema.default = this.metadata.typeGenerator.getInitializerValue(this.node.initializer);
+        } else if (!this.node.questionToken) {
             this.required = true;
         }
     }

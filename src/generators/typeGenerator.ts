@@ -244,8 +244,12 @@ export class TypeGenerator {
                         subSchema.description = ts.displayPartsToString(comments).trim();
                     }
 
-                    const propDeclNode = <ts.PropertyDeclaration>prop.declarations[0];
-                    if (!propDeclNode.questionToken) {
+                    // also could be ts.PropertySignature
+                    const propDeclNode = <ts.PropertyDeclaration>prop.valueDeclaration;
+                    if (propDeclNode.initializer) {
+                        subSchema.default = this.getInitializerValue(propDeclNode.initializer, subSchema);
+                        // if there has a default value, treat prop as optional
+                    } else if (!propDeclNode.questionToken) {
                         if (!schema.required) {
                             schema.required = [];
                         }
@@ -273,6 +277,24 @@ export class TypeGenerator {
             // need handle 'K' type?
         } else {
             throw new NotImplementedError('Unknown generic type ' + this.typeChecker.typeToString(type));
+        }
+    }
+
+    public getInitializerValue(node: ts.Expression, schema?: TypeSchema): any {
+        // TODO: validates value is conform to schema defined
+        switch (node.kind) {
+            case ts.SyntaxKind.ArrayLiteralExpression:
+                return (<ts.ArrayLiteralExpression>node).elements.map(e => this.getInitializerValue(e));
+            case ts.SyntaxKind.NumericLiteral:
+                return Number((<ts.NumericLiteral>node).text);
+            case ts.SyntaxKind.StringLiteral:
+                return (<ts.StringLiteral>node).text;
+            case ts.SyntaxKind.TrueKeyword:
+                return true;
+            case ts.SyntaxKind.FalseKeyword:
+                return false;
+            default:
+                throw new NotImplementedError('Unknown default value ' + node.getText());
         }
     }
 }
