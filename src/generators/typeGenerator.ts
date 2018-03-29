@@ -98,20 +98,22 @@ export class TypeGenerator {
     }
 
     public getTypeSchema(type: ts.Type, schema: TypeSchema = {}): TypeSchema {
-        let returnSchema = schema;
-
         let asRef = true;
-        if (!type.symbol || (type.flags & ts.TypeFlags.Object && (<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Anonymous)) {
+        if (!type.symbol) {
             asRef = false;
-        } else if (type.flags & ts.TypeFlags.Object && (<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Reference
-            && (<ts.TypeReference>type).typeArguments && (<ts.TypeReference>type).typeArguments.length) {
-            // don't reference to a generic type
-            asRef = false;
-        } else {
-            returnSchema = {
-                $ref:  `#/components/schemas/${this.reffedSchemas.getTypeName(type, this.typeChecker)}`,
-            };
+        } else if (type.flags & ts.TypeFlags.Object) {
+            // ts.TypeReference also a ts.ObjectType object
+            const typeRef = <ts.TypeReference>type;
+            if (/* anonymous class */ (typeRef.objectFlags & ts.ObjectFlags.Anonymous) ||
+                /* internal Date */ (typeRef.objectFlags & ts.ObjectFlags.Interface && typeRef.symbol.name === 'Date') ||
+                /* generic type */ (typeRef.objectFlags & ts.ObjectFlags.Reference && typeRef.typeArguments && typeRef.typeArguments.length)) {
+                asRef = false;
+            }
         }
+
+        let returnSchema = asRef ? {
+                $ref:  `#/components/schemas/${this.reffedSchemas.getTypeName(type, this.typeChecker)}`,
+        } : schema;
 
         if (!asRef || !this.reffedSchemas.get(type)) {
             if (asRef) {
