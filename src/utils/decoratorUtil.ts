@@ -8,6 +8,7 @@ export enum DecoratorType {
     Action,
     Param,
     Body,
+    File,
 }
 
 export interface DecoratorMetadata {
@@ -187,6 +188,23 @@ const knownDecorators: Array<DecoratorMetadata> = [
         name: 'Body',
         type: DecoratorType.Param,
         options: {
+            paramIn: 'body',
+            wholeParam: true
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'UploadedFile',
+        type: DecoratorType.File,
+        options: {
+            mediaType: 'multipart/form-data',
+            paramIn: 'body'
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'UploadedFiles',
+        type: DecoratorType.File,
+        options: {
+            mediaType: 'multipart/form-data',
             paramIn: 'body',
             wholeParam: true
         }

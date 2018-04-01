@@ -1,15 +1,15 @@
 
 import * as ts from "typescript";
-import { Method, MethodGenerator } from "./methodGenerator";
-import { DecoratorType, processDecorators } from "../utils/decoratorUtil";
 import { MetadataGenerator } from "./metadataGenerator";
+import { Method, MethodGenerator } from "./methodGenerator";
+import { DecoratorOptions, DecoratorType, processDecorators } from "../utils/decoratorUtil";
 
 export interface Controller {
     name: string;
     route: string;
     description?: string;
     methods: Method[];
-    mediaType?: string;
+    options?: DecoratorOptions;
 }
 
 export class ControllerGenerator implements Controller {
@@ -17,7 +17,7 @@ export class ControllerGenerator implements Controller {
     route: string;
     description: string;
     methods: Method[] = [];
-    mediaType?: string;
+    options?: DecoratorOptions;
 
     constructor(private readonly node: ts.ClassDeclaration, private readonly metadata: MetadataGenerator) {
         this.processDecorators();
@@ -40,7 +40,7 @@ export class ControllerGenerator implements Controller {
                 case DecoratorType.Controller:
                     if (this.route) throw new Error(`Encountered multiple route decorator in '${this.node.name!.text}' controller`);
                     this.route = decorator.arguments[0];
-                    this.mediaType = decorator.options.mediaType;
+                    this.options = decorator.options;
             }
         })
     }

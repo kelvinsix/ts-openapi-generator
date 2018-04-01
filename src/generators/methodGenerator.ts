@@ -1,6 +1,6 @@
 
 import * as ts from "typescript";
-import { DecoratorType, processDecorators } from "../utils/decoratorUtil";
+import { DecoratorType, DecoratorOptions, processDecorators } from "../utils/decoratorUtil";
 import { ParameterGenerator, Parameter } from "./parameterGenerator";
 import { MetadataGenerator } from "./metadataGenerator";
 import { TypeSchema } from "./typeGenerator";
@@ -16,6 +16,7 @@ export interface Method {
     description?: string;
     parameters: Parameter[];
     returnSchema: TypeSchema
+    options?: DecoratorOptions;
 }
 
 export class MethodGenerator implements Method {
@@ -25,6 +26,7 @@ export class MethodGenerator implements Method {
     description: string;
     parameters: Parameter[] = [];
     returnSchema: TypeSchema;
+    options: DecoratorOptions;
 
     constructor(private readonly node: ts.MethodDeclaration, private readonly metadata: MetadataGenerator) {
         this.processDecorators();
@@ -49,6 +51,7 @@ export class MethodGenerator implements Method {
                     method: decorator.name.toLowerCase(),
                     route: decorator.arguments[0]
                 });
+                this.options = decorator.options;
             }
         });
     }
