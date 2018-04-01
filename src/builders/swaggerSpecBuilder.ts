@@ -59,11 +59,10 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                             bodySchema.properties[parameter.name] = parameter.schema;
                             if (parameter.required) {
                                 requestBody.required = true;
-                                // openapi3-ts didn't define such field
-                                if ((<TypeSchema>bodySchema).required === undefined) {
-                                    (<TypeSchema>bodySchema).required = [];
+                                if (bodySchema.required === undefined) {
+                                    bodySchema.required = [];
                                 }
-                                (<TypeSchema>bodySchema).required.push(parameter.name);
+                                bodySchema.required.push(parameter.name);
                             }
                         }
                     } else if (parameter.wholeParam) {
