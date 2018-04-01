@@ -4,7 +4,7 @@ import { ControllerGenerator, Controller } from "./controllerGenerator";
 import { TypeGenerator, TypeSchemaMap } from "./typeGenerator";
 
 export class MetadataGenerator {
-    private program: ts.Program;
+    program: ts.Program;
     typeChecker: ts.TypeChecker;
     typeGenerator: TypeGenerator;
     controllers: Controller[] = []

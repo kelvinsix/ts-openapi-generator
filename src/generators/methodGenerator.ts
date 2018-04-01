@@ -43,11 +43,11 @@ export class MethodGenerator implements Method {
     }
 
     private processDecorators() {
-        processDecorators(this.node, this.metadata.typeChecker, decorator => {
+        processDecorators(this.node, this.metadata, decorator => {
             if (decorator.type === DecoratorType.Action) {
                 this.routes.push({
                     method: decorator.name.toLowerCase(),
-                    route: decorator.argument
+                    route: decorator.arguments[0]
                 });
             }
         });

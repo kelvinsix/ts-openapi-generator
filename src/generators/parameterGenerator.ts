@@ -34,11 +34,11 @@ export class ParameterGenerator implements Parameter {
     }
 
     private processDecorators(): void {
-        processDecorators(this.node, this.metadata.typeChecker, decorator => {
+        processDecorators(this.node, this.metadata, decorator => {
             if (decorator.type == DecoratorType.Param || decorator.type == DecoratorType.Body) {
-                this.name = decorator.argument;
-                this.where = decorator.paramIn;
-                this.wholeParam = decorator.wholeParam;
+                this.name = decorator.arguments[0];
+                this.where = decorator.options.paramIn;
+                this.wholeParam = decorator.options.wholeParam;
 
                 const type = this.metadata.typeChecker.getTypeFromTypeNode(this.node.type);
                 this.schema = this.metadata.typeGenerator.getTypeSchema(type);

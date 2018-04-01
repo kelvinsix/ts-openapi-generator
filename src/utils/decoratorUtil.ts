@@ -1,5 +1,6 @@
 
 import * as ts from "typescript";
+import { MetadataGenerator } from "../generators/metadataGenerator";
 
 export enum DecoratorType {
     Unknown,
@@ -10,79 +11,184 @@ export enum DecoratorType {
 }
 
 export interface DecoratorMetadata {
-    decorator: ts.Decorator;
-    type: DecoratorType;
     name: string;
-    argument: string;
+    package: string;
+    type: DecoratorType;
+    options?: DecoratorOptions;
+    arguments?: any[];
+}
+
+export interface DecoratorOptions {
+    mediaType?: string;
     paramIn?: string;
     wholeParam?: boolean;
 }
 
-export function processDecorators(node: ts.Node, typeChecker: ts.TypeChecker, cb: (decorator: DecoratorMetadata) => void) {
+export function processDecorators(node: ts.Node, metadata: MetadataGenerator, cb: (decorator: DecoratorMetadata) => void) {
     if (!node.decorators || !node.decorators.length) {
         return;
     }
 
-    function getName(decorator: ts.Decorator): string {
-        const signature = typeChecker.getResolvedSignature(<ts.CallExpression>decorator.expression);
-        const declaration = signature.getDeclaration() as ts.FunctionDeclaration;
+    const typeChecker = metadata.typeChecker;
+    const sourceFileToPackageName: ts.Map<string> = (<any>metadata.program).sourceFileToPackageName
 
-        if (declaration.getSourceFile().fileName.indexOf('/routing-controllers/decorator/') == -1) {
-            return;
+    class Decorator implements DecoratorMetadata {
+        name: string;
+        package: string;
+        type: DecoratorType;
+        options: DecoratorOptions;
+        arguments: any[] = [];
+
+        constructor(private readonly node: ts.Decorator) {
+            const signature = typeChecker.getResolvedSignature(<ts.CallExpression>node.expression);
+            const declaration = signature.getDeclaration() as ts.FunctionDeclaration;
+            const fileName = declaration.getSourceFile().fileName;
+            this.name = declaration.name.text;
+            this.package = sourceFileToPackageName.get(fileName.toLowerCase());
+            this.findDecorator();
+            this.setArguments();
         }
 
-        return declaration.name.text;
-    }
-
-    function getType(name: string): DecoratorType {
-        if (decoratorMap[name]) {
-            let type = decoratorMap[name];
-            return (type instanceof Array) ? type[0] : type;
+        private findDecorator() {
+            for (const d of knownDecorators) {
+                if (d.name === this.name && d.package === this.package) {
+                    this.type = d.type;
+                    this.options = d.options || {};
+                    return;
+                }
+            }
+            this.type = DecoratorType.Unknown;
+            // console.info(`Decorator: ${this.package}.${this.name}: ${this.node.getText()}`);
         }
-        return DecoratorType.Unknown;
-    }
 
-    function getArgument(decorator: ts.Decorator): string {
-        const expression = <ts.CallExpression>decorator.expression;
-        const args = expression.arguments;
-        if (!args || !args.length) return;
-        return ts.isStringLiteral(args[0]) ? (<ts.StringLiteral>args[0]).text : '';
+        private setArguments() {
+            const expression = <ts.CallExpression>this.node.expression;
+            const args = expression.arguments;
+            if (!args || !args.length) return;
+
+            for (const argNode of args) {
+                if (ts.isStringLiteral(argNode)) {
+                    this.arguments.push(argNode.text);
+                }
+            }
+        }
     }
 
     node.decorators.forEach(decorator => {
-        const name = getName(decorator);
-        if (!name) return;
-        const metadata: DecoratorMetadata = {
-            decorator, name,
-            type: getType(name),
-            argument: getArgument(decorator)
-        }
-        if (metadata.type == DecoratorType.Param || metadata.type == DecoratorType.Body) {
-            const [, where, isWhole ] = decoratorMap[name];
-            metadata.paramIn = where;
-            metadata.wholeParam = isWhole;
-        }
+        const metadata = new Decorator(decorator);
         cb(metadata);
     });
 }
 
-const decoratorMap = {
-    'Controller': DecoratorType.Controller,
-    'JsonController': DecoratorType.Controller,
-    'Get': DecoratorType.Action,
-    'Put': DecoratorType.Action,
-    'Post': DecoratorType.Action,
-    'Delete': DecoratorType.Action,
-    'Options': DecoratorType.Action,
-    'Head': DecoratorType.Action,
-    'Patch': DecoratorType.Action,
-    'Param': [DecoratorType.Param, 'path', false],
-    'QueryParam': [DecoratorType.Param, 'query', false],
-    'QueryParams': [DecoratorType.Param, 'query', true],
-    'HeaderParam': [DecoratorType.Param, 'header', false],
-    'HeaderParams': [DecoratorType.Param, 'header', true],
-    'CookieParam': [DecoratorType.Param, 'cookie', false],
-    'CookieParams': [DecoratorType.Param, 'cookie', true],
-    'BodyParam': [DecoratorType.Body, 'body', false],
-    'Body': [DecoratorType.Body, 'body', true],
-};
+const knownDecorators: Array<DecoratorMetadata> = [
+    {
+        package: 'routing-controllers',
+        name: 'Controller',
+        type: DecoratorType.Controller,
+        options: {
+            mediaType: '*/*',
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'JsonController',
+        type: DecoratorType.Controller,
+        options: {
+            mediaType: 'application/json',
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'Get',
+        type: DecoratorType.Action,
+    }, {
+        package: 'routing-controllers',
+        name: 'Put',
+        type: DecoratorType.Action,
+    }, {
+        package: 'routing-controllers',
+        name: 'Post',
+        type: DecoratorType.Action,
+    }, {
+        package: 'routing-controllers',
+        name: 'Delete',
+        type: DecoratorType.Action,
+    }, {
+        package: 'routing-controllers',
+        name: 'Options',
+        type: DecoratorType.Action,
+    }, {
+        package: 'routing-controllers',
+        name: 'Head',
+        type: DecoratorType.Action,
+    }, {
+        package: 'routing-controllers',
+        name: 'Patch',
+        type: DecoratorType.Action,
+    }, {
+        package: 'routing-controllers',
+        name: 'Param',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'path'
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'QueryParam',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'query'
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'QueryParams',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'query',
+            wholeParam: true
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'HeaderParam',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'header'
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'HeaderParams',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'header',
+            wholeParam: true
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'CookieParam',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'cookie'
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'CookieParams',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'cookie',
+            wholeParam: true
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'BodyParam',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'body'
+        }
+    }, {
+        package: 'routing-controllers',
+        name: 'Body',
+        type: DecoratorType.Param,
+        options: {
+            paramIn: 'body',
+            wholeParam: true
+        }
+    }
+]

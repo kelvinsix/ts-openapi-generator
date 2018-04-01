@@ -35,14 +35,12 @@ export class ControllerGenerator implements Controller {
     }
 
     private processDecorators() {
-        processDecorators(this.node, this.metadata.typeChecker, decorator => {
+        processDecorators(this.node, this.metadata, decorator => {
             switch (decorator.type) {
                 case DecoratorType.Controller:
                     if (this.route) throw new Error(`Encountered multiple route decorator in '${this.node.name!.text}' controller`);
-                    this.route = decorator.argument;
-                    if (decorator.name === 'JsonController') {
-                        this.mediaType = 'application/json';
-                    }
+                    this.route = decorator.arguments[0];
+                    this.mediaType = decorator.options.mediaType;
             }
         })
     }
