@@ -17,6 +17,7 @@ export interface Method {
     parameters: Parameter[];
     returnSchema: TypeSchema
     options?: DecoratorOptions;
+    authorization?: string;
 }
 
 export class MethodGenerator implements Method {
@@ -27,6 +28,7 @@ export class MethodGenerator implements Method {
     parameters: Parameter[] = [];
     returnSchema: TypeSchema;
     options: DecoratorOptions;
+    authorization?: string;
 
     constructor(private readonly node: ts.MethodDeclaration, private readonly metadata: MetadataGenerator) {
         this.processDecorators();
@@ -52,6 +54,8 @@ export class MethodGenerator implements Method {
                     route: decorator.arguments[0]
                 });
                 this.options = decorator.options;
+            } else if (decorator.type === DecoratorType.Authorization) {
+                this.authorization = decorator.arguments[0] || '';
             }
         });
     }

@@ -1,7 +1,7 @@
 
 import * as oa from "openapi3-ts";
 import { OpenApiBuilder } from "./openApiBuilder";
-import { Config } from "../types";
+import { Config, SecurityRequirements } from "../types";
 import { MetadataGenerator } from "../generators/metadataGenerator";
 import { Controller } from "../generators/controllerGenerator";
 import { TypeSchema } from "../generators/typeGenerator";
@@ -12,11 +12,21 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
     }
 
     public getSpec(): oa.OpenAPIObject {
-        const { info, servers } = this.config;
+        const { info, servers, securitySchemes, securityTemplates } = this.config;
         this.addTitle(info.title).addVersion(info.version);
         if (info.description) this.addDescription(info.description);
         if (servers && servers.length) {
             servers.forEach(s => this.addServer(s));
+        }
+        if (securitySchemes && securityTemplates) {
+            for (const name in securitySchemes) {
+                if (securitySchemes.hasOwnProperty(name)) {
+                    this.addSecurityScheme(name, securitySchemes[name]);
+                }
+            }
+            if (securityTemplates[''] === undefined) {
+                throw new Error('securityTemplte must have default template in config file');
+            }
         }
 
         this.metadata.controllers.forEach(controller => {
@@ -31,6 +41,16 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
             controller.methods.forEach(method => {
                 const paramObjs: oa.ParameterObject[] = [];
                 let requestBody: oa.RequestBodyObject;
+                let security: SecurityRequirements = undefined;
+                if (securityTemplates) {
+                    const securityName = method.authorization !== undefined ? method.authorization : controller.authorization !== undefined ? controller.authorization : undefined;
+                    if (securityName !== undefined) {
+                        if (securityTemplates[securityName] === undefined) {
+                            throw new Error(`Can't find template ${securityName} in securityTemplate`)
+                        }
+                        security = securityTemplates[securityName];
+                    }
+                }
 
                 for (const parameter of method.parameters) {
                     if (parameter.options.paramIn === 'body') {
@@ -101,6 +121,10 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                                 schema: method.returnSchema
                             }
                         };
+                    }
+                    if (security) {
+                        // openapi3-ts definition is wrong
+                        (<any>operation).security = [security];
                     }
 
                     pathObj[route.method] = operation;

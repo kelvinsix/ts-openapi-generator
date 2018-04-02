@@ -9,6 +9,7 @@ export enum DecoratorType {
     Param,
     Body,
     File,
+    Authorization,
 }
 
 export interface DecoratorMetadata {
@@ -208,5 +209,9 @@ const knownDecorators: Array<DecoratorMetadata> = [
             paramIn: 'body',
             wholeParam: true
         }
+    }, {
+        package: 'routing-controllers',
+        name: 'Authorized',
+        type: DecoratorType.Authorization,
     }
 ]

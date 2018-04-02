@@ -10,6 +10,7 @@ export interface Controller {
     description?: string;
     methods: Method[];
     options?: DecoratorOptions;
+    authorization?: string;
 }
 
 export class ControllerGenerator implements Controller {
@@ -18,6 +19,7 @@ export class ControllerGenerator implements Controller {
     description: string;
     methods: Method[] = [];
     options?: DecoratorOptions;
+    authorization?: string;
 
     constructor(private readonly node: ts.ClassDeclaration, private readonly metadata: MetadataGenerator) {
         this.processDecorators();
@@ -36,11 +38,12 @@ export class ControllerGenerator implements Controller {
 
     private processDecorators() {
         processDecorators(this.node, this.metadata, decorator => {
-            switch (decorator.type) {
-                case DecoratorType.Controller:
-                    if (this.route) throw new Error(`Encountered multiple route decorator in '${this.node.name!.text}' controller`);
-                    this.route = decorator.arguments[0];
-                    this.options = decorator.options;
+            if (decorator.type == DecoratorType.Controller) {
+                if (this.route) throw new Error(`Encountered multiple route decorator in '${this.node.name!.text}' controller`);
+                this.route = decorator.arguments[0];
+                this.options = decorator.options;
+            } else if (decorator.type == DecoratorType.Authorization) {
+                this.authorization = decorator.arguments[0] || '';
             }
         })
     }
