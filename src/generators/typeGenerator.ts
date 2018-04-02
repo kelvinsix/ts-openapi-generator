@@ -1,5 +1,7 @@
 import * as ts from "typescript";
 import { NotImplementedError, NotSupportedError } from "../utils/error";
+import { processDecorators, DecoratorType } from "../utils/decoratorUtil";
+import { MetadataGenerator } from "./metadataGenerator";
 
 type PrimitiveType = number | boolean | string | null;
 
@@ -93,8 +95,10 @@ export class TypeSchemaMap {
 
 export class TypeGenerator {
     reffedSchemas = new TypeSchemaMap();
+    private readonly typeChecker: ts.TypeChecker;
 
-    constructor(private readonly typeChecker: ts.TypeChecker) {
+    constructor(private readonly metadata: MetadataGenerator) {
+        this.typeChecker = metadata.typeChecker;
     }
 
     public getTypeSchema(type: ts.Type, schema: TypeSchema = {}): TypeSchema {
@@ -231,15 +235,29 @@ export class TypeGenerator {
         schema.type = 'object';
         schema.properties = {};
 
-        const typeDefNode = type.symbol.declarations ? type.symbol.declarations[0] : undefined;
+        const typeDeclNode = type.symbol.declarations ? type.symbol.declarations[0] : undefined;
         const props = this.typeChecker.getPropertiesOfType(type);
+        let hiddenClass = false;
+        if (typeDeclNode) processDecorators(typeDeclNode, this.metadata, decorator => {
+            if (decorator.type == DecoratorType.Exclude) hiddenClass = true;
+        });
 
         if (props.length) {
             for (const prop of props) {
                 if (prop.flags & ts.SymbolFlags.Method) {
                     // skip it
                 } else if (prop.flags & ts.SymbolFlags.Property) {
-                    const subType = this.typeChecker.getTypeOfSymbolAtLocation(prop, typeDefNode);
+                    // also could be ts.PropertySignature
+                    const propDeclNode = <ts.PropertyDeclaration>prop.valueDeclaration;
+
+                    let hiddenProp = hiddenClass;
+                    processDecorators(propDeclNode, this.metadata, decorator => {
+                        if (decorator.type == DecoratorType.Exclude) hiddenProp = true;
+                        else if (decorator.type == DecoratorType.Expose) hiddenProp = false;
+                    });
+                    if (hiddenProp) continue;
+
+                    const subType = this.typeChecker.getTypeOfSymbolAtLocation(prop, typeDeclNode);
                     const subSchema = schema.properties[prop.name] = this.getTypeSchema(subType)
 
                     const comments = prop.getDocumentationComment(this.typeChecker);
@@ -247,8 +265,6 @@ export class TypeGenerator {
                         subSchema.description = ts.displayPartsToString(comments).trim();
                     }
 
-                    // also could be ts.PropertySignature
-                    const propDeclNode = <ts.PropertyDeclaration>prop.valueDeclaration;
                     if (propDeclNode.initializer) {
                         subSchema.default = this.getInitializerValue(propDeclNode.initializer, subSchema);
                         // if there has a default value, treat prop as optional

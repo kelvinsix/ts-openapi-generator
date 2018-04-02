@@ -12,7 +12,7 @@ export class MetadataGenerator {
     constructor(files: string[], options: ts.CompilerOptions) {
         this.program = ts.createProgram(files, options);
         this.typeChecker = this.program.getTypeChecker();
-        this.typeGenerator = new TypeGenerator(this.typeChecker);
+        this.typeGenerator = new TypeGenerator(this);
     }
 
     get typeSchemas(): TypeSchemaMap {

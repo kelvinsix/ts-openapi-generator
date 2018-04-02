@@ -10,6 +10,8 @@ export enum DecoratorType {
     Body,
     File,
     Authorization,
+    Exclude,
+    Expose,
 }
 
 export interface DecoratorMetadata {
@@ -60,7 +62,9 @@ export function processDecorators(node: ts.Node, metadata: MetadataGenerator, cb
                 }
             }
             this.type = DecoratorType.Unknown;
-            // console.info(`Decorator: ${this.package}.${this.name}: ${this.node.getText()}`);
+            // const sourceFile = this.node.getSourceFile();
+            // const pos = sourceFile.getLineAndCharacterOfPosition(this.node.getStart(sourceFile));
+            // console.info(`Decorator: ${this.package}.${this.name}: ${sourceFile.fileName}(${pos.line+1},${pos.character+1})`);
         }
 
         private setArguments() {
@@ -213,5 +217,13 @@ const knownDecorators: Array<DecoratorMetadata> = [
         package: 'routing-controllers',
         name: 'Authorized',
         type: DecoratorType.Authorization,
+    }, {
+        package: 'class-transformer',
+        name: 'Exclude',
+        type: DecoratorType.Exclude,
+    }, {
+        package: 'class-transformer',
+        name: 'Expose',
+        type: DecoratorType.Expose,
     }
 ]
