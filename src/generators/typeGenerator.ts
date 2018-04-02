@@ -126,7 +126,7 @@ export class TypeGenerator {
                 } else if (type.flags & ts.TypeFlags.Union) {
                     this.getUnionTypeSchema(<ts.UnionType>type, schema);
                 } else if (type.flags & ts.TypeFlags.Void) {
-                    schema.type = undefined;
+                    schema.type = null;
                 } else if (type.flags & ts.TypeFlags.Intersection) {
                     this.getIntersectionTypeSchema(<ts.IntersectionType>type, schema);
                 } else if (type.flags & ts.TypeFlags.Object && (<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Reference) {
@@ -148,7 +148,7 @@ export class TypeGenerator {
             }
         }
 
-        return returnSchema;
+        return schema.type === null ? undefined : returnSchema;
     }
 
     private getPrimitiveTypeSchema(type: ts.Type, schema: TypeSchema) {
@@ -216,6 +216,7 @@ export class TypeGenerator {
     }
 
     private getIntersectionTypeSchema(type: ts.IntersectionType, schema: TypeSchema) {
+        schema.type = 'object';
         schema.allOf = [];
         for (const subType of type.types) {
             schema.allOf.push(this.getTypeSchema(subType));

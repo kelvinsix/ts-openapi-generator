@@ -86,7 +86,7 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                     } else if (parameter.options.wholeParam) {
                         // TODO: set same parameter schema as reference
                         const schema = parameter.schema.$ref ? this.metadata.typeSchemas.byRef(parameter.schema.$ref) : parameter.schema;
-                        if (schema.type === 'object') {
+                        if (schema.properties) {
                             for (const name in schema.properties) {
                                 if (schema.properties.hasOwnProperty(name)) {
                                     paramObjs.push(this.getParamObject(name, parameter.options.paramIn,
@@ -115,7 +115,7 @@ export class SwaggerSpecBuilder extends OpenApiBuilder {
                     if (method.summary) operation.summary = method.summary;
                     if (paramObjs.length) operation.parameters = paramObjs;
                     if (requestBody && route.method !== 'get') operation.requestBody = requestBody;
-                    if (method.returnSchema && (method.returnSchema.type || method.returnSchema.$ref)) {
+                    if (method.returnSchema) {
                         (<oa.ResponseObject>operation.responses.default).content = {
                             [method.options.mediaType || controller.options.mediaType || '*/*']: {
                                 schema: method.returnSchema
