@@ -147,6 +147,9 @@ export class TypeGenerator {
                 } else {
                     throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(type));
                 }
+            } else if (type.flags & ts.TypeFlags.Union) {
+                // enum type
+                this.getUnionTypeSchema(<ts.UnionType>type, schema);
             } else {
                 throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(type));
             }
@@ -163,6 +166,9 @@ export class TypeGenerator {
             schema.type = typeof value;
             schema.enum = [ value ];
             schema.default = value;
+        } else if (type.flags & ts.TypeFlags.BooleanLiteral) {
+            schema.type = 'boolean'
+            schema.enum = [ (<any>type).intrinsicName === 'true' ]
         } else {
             throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(type));
         }
