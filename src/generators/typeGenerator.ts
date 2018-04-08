@@ -135,6 +135,9 @@ export class TypeGenerator {
                     this.getIntersectionTypeSchema(<ts.IntersectionType>type, schema);
                 } else if (type.flags & ts.TypeFlags.Object && (<ts.ObjectType>type).objectFlags & ts.ObjectFlags.Reference) {
                     this.getTupleTypeSchema(<ts.TypeReference>type, schema);
+                } else if (type.flags & ts.TypeFlags.NonPrimitive && (<any>type).intrinsicName === 'object') {
+                    // 'object' type
+                    schema.type = 'object';
                 } else {
                     throw new NotImplementedError('Unknown type ' + this.typeChecker.typeToString(type));
                 }
