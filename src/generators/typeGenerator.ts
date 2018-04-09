@@ -264,6 +264,12 @@ export class TypeGenerator {
                         if (decorator.type == DecoratorType.Exclude) hiddenProp = true;
                         else if (decorator.type == DecoratorType.Expose) hiddenProp = false;
                     });
+                    for (const tag of prop.getJsDocTags() || []) {
+                        if (tag.name === 'internal') {
+                            hiddenProp = true;
+                            break;
+                        }
+                    }
                     if (hiddenProp) continue;
 
                     const subType = this.typeChecker.getTypeOfSymbolAtLocation(prop, typeDeclNode);
