@@ -2,16 +2,25 @@
   "name": "ts-openapi-generator",
   "version": "0.0.1",
   "license": "MIT",
-  "private": true,
+  "description": "OpenAPI document generator for TypeScript using routing-controllers",
   "author": "kelvinsix <kelvinsixl@gmail.com>",
   "repository": {
     "type": "git",
     "url": "https://github.com/kelvinsix/ts-openapi-generator.git"
   },
-  "bin": "build/cli.js",
+  "bin": "dist/cli.js",
   "engines": {
     "node": ">=6.0.0"
   },
+  "keywords": [
+    "typescript",
+    "openapi",
+    "generator"
+  ],
+  "files": [
+    "dist/",
+    "LICENSE"
+  ],
   "dependencies": {
     "argparse": "^1.0.10",
     "glob": "^7.1.2",
