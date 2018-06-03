@@ -2,6 +2,7 @@
     "compilerOptions": {
         "target": "es6",
         "module": "commonjs",
+        "newLine": "LF",
         "experimentalDecorators": true,
         "sourceMap": true,
         "outDir": "dist",
