@@ -48,7 +48,7 @@ export function processDecorators(node: ts.Node, metadata: MetadataGenerator, cb
             const declaration = signature.getDeclaration() as ts.FunctionDeclaration;
             const fileName = declaration.getSourceFile().fileName;
             this.name = declaration.name.text;
-            this.package = sourceFileToPackageName.get(fileName.toLowerCase());
+            this.package = sourceFileToPackageName.get(ts.sys.useCaseSensitiveFileNames ? fileName : fileName.toLowerCase());
             this.findDecorator();
             this.setArguments();
         }
