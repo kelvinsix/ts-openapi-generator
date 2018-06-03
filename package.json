@@ -1,6 +1,6 @@
 {
   "name": "ts-openapi-generator",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "description": "OpenAPI document generator for TypeScript using routing-controllers",
   "author": "kelvinsix <kelvinsixl@gmail.com>",
